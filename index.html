@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tool Description Generator</title>
+    <style>
+        .custom-dropdown {
+            position: relative;
+            width: 500px;
+        }
+
+        .dropdown-selected {
+            padding: 10px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #fff;
+            width: 100%;
+        }
+
+        .dropdown-selected span {
+            margin-left: auto;
+        }
+
+        .dropdown-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            border: 1px solid #ccc;
+            background-color: white;
+            z-index: 1000;
+            max-height: 400px;
+            overflow-y: auto;
+            display: none;
+            width: 100%;
+        }
+
+        .dropdown-item {
+            padding: 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .dropdown-item img {
+            width: 120px;
+            height: auto;
+            margin-right: 15px;
+        }
+
+        .dropdown-item:hover {
+            background-color: #f0f0f0;
+        }
+
+        select {
+            width: 300px;
+            font-size: 16px;
+        }
+
+        select option {
+            display: flex;
+            align-items: center;
+            padding: 10px;
+        }
+
+        select option img {
+            width: 30px;
+            height: auto;
+            margin-right: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .error {
+            color: red;
+        }
+    </style>
+    <script>
+        function toggleDropdown(listId) {
+            const dropdownList = document.getElementById(listId);
+            const isVisible = dropdownList.style.display === "block";
+            dropdownList.style.display = isVisible ? "none" : "block";
+        }
+
+        function selectMaterial(code, name) {
+            document.getElementById("selected-material-text").textContent = `${code} - ${name}`;
+            document.getElementById("material").value = code;
+            document.getElementById("material-list").style.display = "none";
+        }
+
+        function selectTool(code, name) {
+            document.getElementById("selected-tool-text").textContent = `${code} - ${name}`;
+            document.getElementById("tool_type").value = code;
+            document.getElementById("tool-list").style.display = "none";
+        }
+
+        function selectHolder(key, name) {
+            document.getElementById("selected-holder-text").textContent = `${key} - ${name}`;
+            document.getElementById("holder_type").value = key;
+            document.getElementById("holder-list").style.display = "none";
+        }
+
+        function validateForm(event) {
+            let isValid = true;
+            const fields = ["material", "tool_type", "diameter", "teeth", "overhang", "holder_type", "holder_diameter", "holder_length"];
+
+            fields.forEach(field => {
+                const element = document.getElementById(field);
+                if (!element.value) {
+                    isValid = false;
+                    document.getElementById(`${field}-error`).textContent = "This field is required";
+                } else {
+                    document.getElementById(`${field}-error`).textContent = "";
+                }
+            });
+
+            if (!isValid) {
+                event.preventDefault();
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Tool Description Generator</h1>
+
+    <form id="tool-form" method="POST" action="/generate" onsubmit="validateForm(event)">
+        <h2>Select Tool Material:</h2>
+        <div class="custom-dropdown" id="material-dropdown">
+            <div class="dropdown-selected" onclick="toggleDropdown('material-list')">
+                <span id="selected-material-text">Select a Material</span>
+            </div>
+            <div class="dropdown-list" id="material-list">
+                {% for code, material in materials.items() %}
+                <div class="dropdown-item" onclick="selectMaterial('{{ code }}', '{{ material.name }}')">
+                    <img src="{{ url_for('static', filename='images/' + material.image) }}" alt="{{ code }} Image">
+                    <span>{{ code }} - {{ material.name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <input type="hidden" name="material" id="material" value="">
+        <div id="material-error" class="error"></div>
+
+        <h2>Select Tool Type:</h2>
+        <div class="custom-dropdown" id="tool-dropdown">
+            <div class="dropdown-selected" onclick="toggleDropdown('tool-list')">
+                <span id="selected-tool-text">Select a Tool</span>
+            </div>
+            <div class="dropdown-list" id="tool-list">
+                {% for code, tool in tool_types.items() %}
+                <div class="dropdown-item" onclick="selectTool('{{ code }}', '{{ tool.name }}')">
+                    <img src="{{ url_for('static', filename='images/' + tool.image) }}" alt="{{ code }} Image">
+                    <span>{{ code }} - {{ tool.name }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <input type="hidden" name="tool_type" id="tool_type" value="">
+        <div id="tool_type-error" class="error"></div>
+
+        <div class="form-group">
+            <label for="diameter">Cutting Diameter (DC):</label>
+            <input type="number" name="diameter" id="diameter" required>
+            <div id="diameter-error" class="error"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="teeth">Number of Teeth (Z):</label>
+            <input type="number" name="teeth" id="teeth" required>
+            <div id="teeth-error" class="error"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="overhang">Overhang (OH):</label>
+            <input type="number" name="overhang" id="overhang" required>
+            <div id="overhang-error" class="error"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="holder_type">Holder Type:</label>
+            <div class="custom-dropdown" id="holder-dropdown">
+                <div class="dropdown-selected" onclick="toggleDropdown('holder-list')">
+                    <span id="selected-holder-text">Select a Holder</span>
+                </div>
+                <div class="dropdown-list" id="holder-list">
+                    {% for key, holder in holder_types.items() %}
+                    <div class="dropdown-item" onclick="selectHolder('{{ key }}', '{{ holder.name }}')">
+                        <img src="{{ url_for('static', filename='images/' + holder.image) }}" alt="{{ key }} Image">
+                        <span>{{ key }} - {{ holder.name }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <input type="hidden" name="holder_type" id="holder_type" value="">
+            <div id="holder_type-error" class="error"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="holder_diameter">Holder Diameter:</label>
+            <input type="text" id="holder_diameter" name="holder_diameter">
+            <div id="holder_diameter-error" class="error"></div>
+        </div>
+
+        <div class="form-group">
+            <label for="holder_length">Holder Length:</label>
+            <input type="text" id="holder_length" name="holder_length">
+            <div id="holder_length-error" class="error"></div>
+        </div>
+
+        <button type="submit">Generate</button>
+    </form>
+
+    {% if description %}
+    <h2>Generated Description:</h2>
+    <p>{{ description }}</p>
+    {% endif %}
+</body>
+</html>
